@@ -9,9 +9,10 @@ dist/
 .env.local
 .env.*.local
 
-# Data files (persisted on server)
-data/*.json
-data/*.txt
+# Data files - dynamic JSON files (persisted on server)
+data/friends.json
+data/messages.json
+data/users.json
 
 # IDE
 .vscode/
