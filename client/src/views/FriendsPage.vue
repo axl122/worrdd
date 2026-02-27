@@ -195,6 +195,23 @@ onMounted(() => {
   // Ensure socket is connected
   const socket = store.ensureSocket()
   
+  // Remove existing listeners first to prevent duplicates
+  socket.off('player:id')
+  socket.off('player:reconnected')
+  socket.off('user:info')
+  socket.off('friends:list')
+  socket.off('friends:codeGenerated')
+  socket.off('friends:added')
+  socket.off('friends:removed')
+  socket.off('friends:error')
+  socket.off('messages:list')
+  socket.off('messages:new')
+  socket.off('room:state')
+  socket.off('friends:waitingForAccept')
+  socket.off('friends:gameInvite')
+  socket.off('friends:gameAccepted')
+  socket.off('friends:gameDeclined')
+  
   // Listen for player ID from server
   socket.on('player:id', (data: string | { id: string; name: string }) => {
     if (typeof data === 'string') {

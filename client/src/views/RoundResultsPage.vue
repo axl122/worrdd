@@ -94,6 +94,13 @@ const setupSocketListeners = () => {
   const socket = store.getSocket()
   if (!socket) return
 
+  // Remove existing listeners first to prevent duplicates
+  socket.off('round:end')
+  socket.off('player:ready')
+  socket.off('game:countdown')
+  socket.off('round:start')
+  socket.off('game:end')
+
   socket.on('round:end', (data: RoundEndEvent) => {
     roundIndex.value = data.roundIndex
     sourceWord.value = data.roundStats.sourceWord

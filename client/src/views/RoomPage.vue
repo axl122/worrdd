@@ -66,6 +66,18 @@ const connectSocket = () => {
   const socket = store.connectSocket()
   if (!socket) return
 
+  // Remove existing listeners first to prevent duplicates
+  socket.off('connect')
+  socket.off('disconnect')
+  socket.off('error')
+  socket.off('player:id')
+  socket.off('game:countdown')
+  socket.off('room:state')
+  socket.off('round:start')
+  socket.off('round:end')
+  socket.off('game:end')
+  socket.off('chat:message')
+
   socket.on('connect', () => {
     console.log('Connected to server')
     store.setConnected(true)

@@ -93,6 +93,20 @@ const setupSocketListeners = () => {
     return
   }
 
+  // Remove existing listeners first to prevent duplicates
+  socket.off('game:state')
+  socket.off('round:start')
+  socket.off('word:result')
+  socket.off('word:claimed')
+  socket.off('word:solved')
+  socket.off('powerup:freeze')
+  socket.off('powerup:burn')
+  socket.off('powerup:awarded')
+  socket.off('round:end')
+  socket.off('game:end')
+  socket.off('chat:message')
+  socket.off('player:ready')
+
   socket.on('game:state', (data: any) => {
     roundIndex.value = data.roundIndex
     totalRounds.value = data.totalRounds

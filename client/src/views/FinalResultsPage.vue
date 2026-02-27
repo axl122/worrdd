@@ -42,6 +42,10 @@ const setupSocketListeners = () => {
   const socket = store.getSocket()
   if (!socket) return
 
+  // Remove existing listeners first to prevent duplicates
+  socket.off('game:end')
+  socket.off('room:state')
+
   socket.on('game:end', (data: GameEndEvent) => {
     leaderboard.value = data.finalLeaderboard || []
     winner.value = data.winner
