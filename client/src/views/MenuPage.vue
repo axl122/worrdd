@@ -13,12 +13,19 @@ const currentHint = ref('')
 const hintTimeout = ref<number | null>(null)
 const hintInterval = ref<number | null>(null)
 
-// Notifications
-const showNotifications = ref(false)
+// Chat system
+const showChatPopup = ref(false)
+const showChatView = ref(false)
+const friends = ref<Array<{ id: string; name: string; online: boolean }>>([])
+const selectedFriend = ref<{ id: string; name: string; online?: boolean } | null>(null)
+const messages = ref<Array<{ id: string; from: string; to: string; text: string; timestamp: number }>>([])
+const newMessage = ref('')
+const chatContainerRef = ref<HTMLElement | null>(null)
+
+// Game invite
 const showGameInvite = ref(false)
 
 const unreadCount = computed(() => store.getUnreadCount)
-const unreadMessages = computed(() => Array.from(store.unreadMessages.values()))
 const pendingInvite = computed(() => store.pendingGameInvite)
 const waitingForFriend = computed(() => store.waitingForFriend)
 
@@ -88,15 +95,51 @@ const goToFriends = () => {
   router.push('/friends')
 }
 
-// Notification handling
-const toggleNotifications = () => {
-  showNotifications.value = !showNotifications.value
+// Chat handling
+const toggleChat = () => {
+  showChatPopup.value = !showChatPopup.value
+  if (showChatPopup.value) {
+    const socket = store.getSocket()
+    if (socket) {
+      socket.emit('friends:getList')
+    }
+  }
 }
 
-const openMessage = (fromId: string) => {
-  store.clearUnreadMessages(fromId)
-  router.push('/friends')
+const openChatWithFriend = (friend: { id: string; name: string; online?: boolean }) => {
+  const socket = store.getSocket()
+  if (!socket) return
+  
+  selectedFriend.value = friend
+  showChatView.value = true
+  store.clearUnreadMessages(friend.id)
+  socket.emit('messages:get', { friendId: friend.id })
 }
+
+const closeChatView = () => {
+  showChatView.value = false
+  selectedFriend.value = null
+  messages.value = []
+}
+
+const sendMessage = () => {
+  const socket = store.getSocket()
+  if (!socket || !newMessage.value.trim() || !selectedFriend.value) return
+  
+  socket.emit('messages:send', { 
+    to: selectedFriend.value.id, 
+    text: newMessage.value.trim() 
+  })
+  
+  newMessage.value = ''
+}
+
+const formatTime = (timestamp: number) => {
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+// Notification handling (removed - now using chat)
 
 const acceptGameInvite = () => {
   if (pendingInvite.value) {
@@ -159,16 +202,41 @@ onMounted(() => {
   
   // Listen for new messages
   socket.on('messages:new', (data: { message: { id: string; from: string; to: string; text: string; timestamp: number } }) => {
-    // Only add to unread if not in friends page
-    if (window.location.pathname !== '/friends') {
+    // If chat is open with this friend, add to messages
+    if (showChatView.value && selectedFriend.value?.id === data.message.from) {
+      messages.value.push(data.message)
+      // Scroll to bottom
+      setTimeout(() => {
+        if (chatContainerRef.value) {
+          chatContainerRef.value.scrollTop = chatContainerRef.value.scrollHeight
+        }
+      }, 10)
+    } else {
+      // Add to unread
       store.addUnreadMessage({
         fromId: data.message.from,
-        fromName: '', // Will be filled by server
+        fromName: '',
         text: data.message.text,
         timestamp: data.message.timestamp,
         count: 1
       })
     }
+  })
+  
+  // Listen for friends list
+  socket.on('friends:list', (data: { friends: Array<{ id: string; name: string; online: boolean }> }) => {
+    friends.value = data.friends
+  })
+  
+  // Listen for messages list
+  socket.on('messages:list', (data: { messages: Array<{ id: string; from: string; to: string; text: string; timestamp: number }> }) => {
+    messages.value = data.messages
+    // Scroll to bottom
+    setTimeout(() => {
+      if (chatContainerRef.value) {
+        chatContainerRef.value.scrollTop = chatContainerRef.value.scrollHeight
+      }
+    }, 10)
   })
   
   // Listen for game invites
@@ -227,6 +295,8 @@ onUnmounted(() => {
     socket.off('player:id')
     socket.off('room:state')
     socket.off('messages:new')
+    socket.off('messages:list')
+    socket.off('friends:list')
     socket.off('friends:gameInvite')
     socket.off('friends:gameCreated')
     socket.off('friends:gameAccepted')
@@ -239,35 +309,78 @@ onUnmounted(() => {
 
 <template>
   <div class="menu-container">
-    <!-- Notification Bell (top right) -->
-    <div class="notification-bell" @click="toggleNotifications">
-      <span class="bell-icon">🔔</span>
+    <!-- Chat Icon (top right) -->
+    <div class="chat-icon-btn" @click="toggleChat">
+      <span class="chat-icon">�</span>
       <span v-if="unreadCount > 0" class="notification-badge">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
     </div>
     
-    <!-- Notification Dropdown -->
-    <div v-if="showNotifications" class="notification-dropdown">
-      <div class="notification-header">
-        <span>Notifications</span>
-        <button class="close-dropdown" @click="showNotifications = false">✕</button>
+    <!-- Chat Popup (Friends List) -->
+    <div v-if="showChatPopup && !showChatView" class="chat-popup">
+      <div class="chat-popup-header">
+        <span>Messages</span>
+        <button class="close-btn" @click="showChatPopup = false">✕</button>
       </div>
-      <div v-if="unreadMessages.length === 0" class="no-notifications">
-        No new messages
+      <div v-if="friends.length === 0" class="no-friends">
+        <p>No friends yet</p>
+        <button class="add-friends-btn" @click="router.push('/friends'); showChatPopup = false">Add Friends</button>
       </div>
-      <div v-else class="notification-list">
+      <div v-else class="friends-list">
         <div 
-          v-for="msg in unreadMessages" 
-          :key="msg.fromId" 
-          class="notification-item"
-          @click="openMessage(msg.fromId)"
+          v-for="friend in friends" 
+          :key="friend.id" 
+          class="friend-item"
+          @click="openChatWithFriend(friend)"
         >
-          <span class="notif-avatar">{{ msg.fromName[0] || '?' }}</span>
-          <div class="notif-content">
-            <span class="notif-name">{{ msg.fromName || 'Friend' }}</span>
-            <span class="notif-text">{{ msg.text }}</span>
+          <div class="friend-avatar">{{ friend.name[0]?.toUpperCase() || '?' }}</div>
+          <div class="friend-info">
+            <span class="friend-name">{{ friend.name }}</span>
+            <span class="friend-status" :class="{ online: friend.online }">
+              {{ friend.online ? 'Online' : 'Offline' }}
+            </span>
           </div>
-          <span class="notif-count">{{ msg.count }}</span>
+          <span v-if="store.unreadMessages.get(friend.id)?.count" class="unread-badge">
+            {{ store.unreadMessages.get(friend.id)?.count }}
+          </span>
         </div>
+      </div>
+    </div>
+    
+    <!-- Chat View (Individual Chat) -->
+    <div v-if="showChatView && selectedFriend" class="chat-view">
+      <div class="chat-view-header">
+        <button class="back-btn" @click="closeChatView">←</button>
+        <div class="chat-friend-info">
+          <span class="chat-friend-name">{{ selectedFriend.name }}</span>
+          <span class="chat-friend-status" :class="{ online: selectedFriend.online }">
+            {{ selectedFriend.online ? 'Online' : 'Offline' }}
+          </span>
+        </div>
+        <button class="close-btn" @click="showChatPopup = false; closeChatView()">✕</button>
+      </div>
+      <div class="chat-messages" ref="chatContainerRef">
+        <div 
+          v-for="msg in messages" 
+          :key="msg.id" 
+          class="chat-message"
+          :class="{ sent: msg.from !== selectedFriend.id }"
+        >
+          <span class="msg-text">{{ msg.text }}</span>
+          <span class="msg-time">{{ formatTime(msg.timestamp) }}</span>
+        </div>
+        <div v-if="messages.length === 0" class="no-messages">
+          Start a conversation!
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <input 
+          v-model="newMessage"
+          type="text" 
+          placeholder="Type a message..."
+          @keyup.enter="sendMessage"
+          class="chat-input"
+        />
+        <button class="send-btn" @click="sendMessage">Send</button>
       </div>
     </div>
     
@@ -852,8 +965,8 @@ onUnmounted(() => {
   }
 }
 
-/* Notification Bell */
-.notification-bell {
+/* Chat Icon */
+.chat-icon-btn {
   position: absolute;
   top: var(--spacing-md);
   right: var(--spacing-md);
@@ -862,7 +975,7 @@ onUnmounted(() => {
   z-index: 100;
 }
 
-.bell-icon {
+.chat-icon {
   font-size: 1.5rem;
 }
 
@@ -878,8 +991,8 @@ onUnmounted(() => {
   font-weight: bold;
 }
 
-/* Notification Dropdown */
-.notification-dropdown {
+/* Chat Popup */
+.chat-popup {
   position: absolute;
   top: 50px;
   right: var(--spacing-md);
@@ -887,13 +1000,13 @@ onUnmounted(() => {
   border: 2px solid var(--pencil-dark);
   border-radius: 12px;
   width: 280px;
-  max-height: 300px;
+  max-height: 350px;
   overflow-y: auto;
   z-index: 100;
   box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
 }
 
-.notification-header {
+.chat-popup-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -903,7 +1016,7 @@ onUnmounted(() => {
   font-size: 1.1rem;
 }
 
-.close-dropdown {
+.close-btn {
   background: none;
   border: none;
   font-size: 1.2rem;
@@ -911,19 +1024,34 @@ onUnmounted(() => {
   color: var(--pencil-mid);
 }
 
-.no-notifications {
+.no-friends {
   padding: var(--spacing-lg);
   text-align: center;
   color: var(--pencil-mid);
   font-family: 'Patrick Hand', cursive;
 }
 
-.notification-list {
+.no-friends p {
+  margin-bottom: var(--spacing-sm);
+}
+
+.add-friends-btn {
+  background: var(--pencil-dark);
+  color: var(--bg-paper);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1rem;
+}
+
+.friends-list {
   display: flex;
   flex-direction: column;
 }
 
-.notification-item {
+.friend-item {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -932,11 +1060,11 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--pencil-light);
 }
 
-.notification-item:hover {
+.friend-item:hover {
   background: var(--bg-paper-dark);
 }
 
-.notif-avatar {
+.friend-avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -949,35 +1077,174 @@ onUnmounted(() => {
   font-size: 1.2rem;
 }
 
-.notif-content {
+.friend-info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
-.notif-name {
+.friend-name {
   font-family: 'Patrick Hand', cursive;
   font-weight: bold;
   font-size: 1rem;
 }
 
-.notif-text {
+.friend-status {
   font-family: 'Caveat', cursive;
-  font-size: 0.9rem;
-  color: var(--pencil-mid);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 0.85rem;
+  color: var(--pencil-light);
 }
 
-.notif-count {
-  background: var(--pencil-dark);
-  color: var(--bg-paper);
+.friend-status.online {
+  color: #22c55e;
+}
+
+.unread-badge {
+  background: #ef4444;
+  color: white;
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 0.8rem;
   font-weight: bold;
+}
+
+/* Chat View */
+.chat-view {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 350px;
+  background: var(--bg-paper);
+  border-left: 3px solid var(--pencil-dark);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 10px rgba(0,0,0,0.1);
+}
+
+.chat-view-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 2px solid var(--pencil-dark);
+  background: var(--bg-paper-dark);
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--pencil-dark);
+}
+
+.chat-friend-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-friend-name {
+  font-family: 'Patrick Hand', cursive;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.chat-friend-status {
+  font-family: 'Caveat', cursive;
+  font-size: 0.85rem;
+  color: var(--pencil-light);
+}
+
+.chat-friend-status.online {
+  color: #22c55e;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.chat-message {
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--bg-paper-dark);
+}
+
+.chat-message.sent {
+  align-self: flex-end;
+  background: var(--pencil-dark);
+  color: var(--bg-paper);
+}
+
+.msg-text {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+.msg-time {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--pencil-light);
+  margin-top: 4px;
+}
+
+.chat-message.sent .msg-time {
+  color: var(--bg-paper-dark);
+}
+
+.no-messages {
+  text-align: center;
+  color: var(--pencil-light);
+  font-family: 'Patrick Hand', cursive;
+  padding: var(--spacing-lg);
+}
+
+.chat-input-area {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-top: 2px solid var(--pencil-light);
+}
+
+.chat-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid var(--pencil-dark);
+  border-radius: 20px;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1rem;
+  background: var(--bg-paper);
+  color: var(--pencil-dark);
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: var(--pencil-medium);
+}
+
+.send-btn {
+  background: var(--pencil-dark);
+  color: var(--bg-paper);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1rem;
+}
+
+.send-btn:hover {
+  background: var(--pencil-medium);
 }
 
 /* Game Invite Popup */
