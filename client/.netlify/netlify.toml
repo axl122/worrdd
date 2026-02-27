@@ -10,6 +10,7 @@ headers = []
 publish = "C:\\Users\\BrandIt\\Desktop\\worrdd!\\client\\dist"
 publishOrigin = "config"
 commandOrigin = "config"
+base = "C:\\Users\\BrandIt\\Desktop\\worrdd!\\client"
 command = "npm run build"
 
 [build.environment]

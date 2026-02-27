@@ -109,7 +109,9 @@ io.on('connection', (socket) => {
     const room = rooms.getRoom(Array.from(socket.rooms)[1] || '')
     if (!room) return
     
-    const newSettings = rooms.updateSettings(room.roomCode, socket.id, data)
+    // Get permanent player ID from socket ID
+    const playerId = friends.getPlayerIdBySocket(socket.id) || socket.id
+    const newSettings = rooms.updateSettings(room.roomCode, playerId, data)
     if (newSettings) {
       const roomState: RoomStateEvent = {
         roomCode: room.roomCode,
@@ -127,7 +129,9 @@ io.on('connection', (socket) => {
     const room = rooms.getRoom(Array.from(socket.rooms)[1] || '')
     if (!room) return
     
-    const isReady = rooms.togglePlayerReady(room.roomCode, socket.id)
+    // Get permanent player ID from socket ID
+    const playerId = friends.getPlayerIdBySocket(socket.id) || socket.id
+    const isReady = rooms.togglePlayerReady(room.roomCode, playerId)
     if (isReady === null) return
     
     const roomState: RoomStateEvent = {
@@ -177,14 +181,16 @@ io.on('connection', (socket) => {
     const room = rooms.getRoom(Array.from(socket.rooms)[1] || '')
     if (!room) return
     
-    const result = rooms.usePowerUp(room.roomCode, socket.id, data.type)
+    // Get permanent player ID from socket ID
+    const playerId = friends.getPlayerIdBySocket(socket.id) || socket.id
+    const result = rooms.usePowerUp(room.roomCode, playerId, data.type)
     
     if (!result.success) {
       socket.emit('error', { message: 'Cannot use power-up' })
       return
     }
     
-    const player = room.players.get(socket.id)
+    const player = room.players.get(playerId)
     
     if (data.type === 'freeze') {
       // Broadcast freeze to all players
@@ -234,7 +240,9 @@ io.on('connection', (socket) => {
     setTimeout(() => {
       io.to(room.roomCode).emit('game:countdown', { count: 0 }) // GO!
       
-      const result = rooms.startGame(room.roomCode, socket.id)
+      // Get permanent player ID from socket ID
+      const playerId = friends.getPlayerIdBySocket(socket.id) || socket.id
+      const result = rooms.startGame(room.roomCode, playerId)
       
       if ('error' in result) {
         socket.emit('error', { message: result.error })
@@ -272,14 +280,16 @@ io.on('connection', (socket) => {
     const room = rooms.getRoom(Array.from(socket.rooms)[1] || '')
     if (!room) return
     
-    const result = await rooms.submitWordAsync(room.roomCode, socket.id, data.word)
+    // Get permanent player ID from socket ID
+    const playerId = friends.getPlayerIdBySocket(socket.id) || socket.id
+    const result = await rooms.submitWordAsync(room.roomCode, playerId, data.word)
     
     const wordResult: WordResultEvent = {
       ok: result.ok,
       word: data.word.toLowerCase(),
       reason: result.reason as any,
       pointsAwarded: result.pointsAwarded,
-      playerId: socket.id,
+      playerId: playerId,
       newTotalScore: result.newTotalScore,
       usedWordsCount: result.usedWordsCount
     }
@@ -288,11 +298,11 @@ io.on('connection', (socket) => {
     
     // Broadcast word to all players for live feed
     if (result.ok && result.usedWordsCount) {
-      const player = room.players.get(socket.id)
+      const player = room.players.get(playerId)
       io.to(room.roomCode).emit('word:claimed', { 
         word: data.word.toLowerCase(),
         usedWordsCount: result.usedWordsCount,
-        playerId: socket.id,
+        playerId: playerId,
         playerName: player?.name || 'Unknown',
         points: result.pointsAwarded
       })
@@ -309,12 +319,12 @@ io.on('connection', (socket) => {
     
     // If solved in guess/scramble/teaser mode, end round immediately
     if (result.solved) {
-      const player = room.players.get(socket.id)
+      const player = room.players.get(playerId)
       
       // Broadcast solve to all players
       io.to(room.roomCode).emit('word:solved', {
         word: result.correctAnswer,
-        playerId: socket.id,
+        playerId: playerId,
         playerName: player?.name || 'Unknown',
         points: result.pointsAwarded
       })
@@ -364,12 +374,14 @@ io.on('connection', (socket) => {
     const room = rooms.getRoom(Array.from(socket.rooms)[1] || '')
     if (!room) return
     
-    const player = room.players.get(socket.id)
+    // Get permanent player ID from socket ID
+    const playerId = friends.getPlayerIdBySocket(socket.id) || socket.id
+    const player = room.players.get(playerId)
     if (!player) return
     
     // Broadcast ready status to all players
     io.to(room.roomCode).emit('player:ready', {
-      playerId: socket.id,
+      playerId: playerId,
       playerName: player.name
     })
     
@@ -458,12 +470,14 @@ io.on('connection', (socket) => {
     const room = rooms.getRoom(Array.from(socket.rooms)[1] || '')
     if (!room) return
     
-    const player = room.players.get(socket.id)
+    // Get permanent player ID from socket ID
+    const playerId = friends.getPlayerIdBySocket(socket.id) || socket.id
+    const player = room.players.get(playerId)
     if (!player) return
     
     const chatMessage = {
-      id: `${Date.now()}-${socket.id}`,
-      playerId: socket.id,
+      id: `${Date.now()}-${playerId}`,
+      playerId: playerId,
       playerName: player.name,
       message: data.message.trim().slice(0, 200),
       timestamp: Date.now()
@@ -489,11 +503,13 @@ io.on('connection', (socket) => {
     for (const roomCode of socket.rooms) {
       if (roomCode === socket.id) continue
       
-      rooms.setPlayerConnected(roomCode, socket.id, false)
+      // Get permanent player ID from socket ID
+      const playerId = friends.getPlayerIdBySocket(socket.id) || socket.id
+      rooms.setPlayerConnected(roomCode, playerId, false)
       
       const room = rooms.getRoom(roomCode)
       if (room) {
-        const result = rooms.removePlayer(roomCode, socket.id)
+        const result = rooms.removePlayer(roomCode, playerId)
         
         if (result.roomEmpty) {
           console.log(`Room ${roomCode} is now empty`)

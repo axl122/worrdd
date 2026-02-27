@@ -72,6 +72,11 @@ function getIO(): Server {
   return io
 }
 
+// Get permanent player ID from socket ID
+export function getPlayerIdBySocket(socketId: string): string | undefined {
+  return socketPlayers.get(socketId)
+}
+
 // Ensure data directory exists
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
