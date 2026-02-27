@@ -453,6 +453,12 @@ export async function submitWordAsync(
     return { ok: false, reason: 'too_short' }
   }
   
+  // Cannot submit the source word itself
+  if (normalizedWord === roundState.sourceWord.toLowerCase()) {
+    console.log(`Word "${normalizedWord}" REJECTED: is the source word`)
+    return { ok: false, reason: 'is_source_word' }
+  }
+  
   // Use async validation with API fallback
   if (!await isValidWordAsync(normalizedWord)) {
     console.log(`Word "${normalizedWord}" REJECTED: not in dictionary`)

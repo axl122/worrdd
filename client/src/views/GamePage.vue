@@ -471,6 +471,7 @@ const getResultMessage = (reason?: string): string => {
     case 'invalid_letters': return "Can't make that from the letters!"
     case 'too_short': return 'Word too short!'
     case 'already_used': return 'Someone already used that!'
+    case 'is_source_word': return "Can't use the source word!"
     case 'round_ended': return 'Round is over!'
     default: return 'Invalid word!'
   }

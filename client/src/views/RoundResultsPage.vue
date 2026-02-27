@@ -124,8 +124,23 @@ const setupSocketListeners = () => {
     countdownNumber.value = data.count
   })
 
-  socket.on('round:start', () => {
+  socket.on('round:start', (data: any) => {
     showCountdown.value = false
+    // Update store with new round data before navigating
+    store.setCurrentRound({
+      roundIndex: data.roundIndex,
+      sourceWord: data.sourceWord,
+      startedAt: data.startedAt,
+      endsAt: data.endsAt,
+      usedWordsGlobal: [],
+      submissionsByPlayerId: {},
+      scoresByPlayerId: {},
+      gameMode: data.gameMode,
+      puzzle: data.puzzle,
+      hint: data.hint,
+      scrambledWord: data.scrambledWord,
+      riddle: data.riddle
+    } as any)
     router.push('/room/game')
   })
 
