@@ -468,7 +468,8 @@ io.on('connection', (socket) => {
             gameMode: result.roundState.gameMode,
             puzzle: result.roundState.puzzle,
             hint: result.roundState.hint,
-            scrambledWord: result.roundState.scrambledWord
+            scrambledWord: result.roundState.scrambledWord,
+            riddle: result.roundState.riddle
           }
           
           const gameState: GameStateEvent = {

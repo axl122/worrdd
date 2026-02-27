@@ -190,9 +190,51 @@ export function getRandomDictionaryWord(minLength: number = 4, maxLength: number
   return words[Math.floor(Math.random() * words.length)]
 }
 
+// Load common words (easier, more relatable words for scramble/guess modes)
+let commonWordsCache: Set<string> | null = null
+
+function loadCommonWords(): Set<string> {
+  if (commonWordsCache) return commonWordsCache
+  
+  try {
+    const wordsPath = path.join(__dirname, '../data/common_words.txt')
+    const content = fs.readFileSync(wordsPath, 'utf-8')
+    commonWordsCache = new Set(
+      content
+        .toLowerCase()
+        .split(/\r?\n/)
+        .map(w => w.trim())
+        .filter(w => w.length >= 4 && /^[a-z]+$/.test(w))
+    )
+    return commonWordsCache!
+  } catch {
+    console.error('Failed to load common_words.txt, falling back to dictionary')
+    return loadDictionary()
+  }
+}
+
+// Get random common word for easier gameplay
+export function getRandomCommonWord(minLength: number = 4, maxLength: number = 8, excludeWords?: Set<string>): string {
+  const commonWords = loadCommonWords()
+  let words = Array.from(commonWords).filter(w => w.length >= minLength && w.length <= maxLength)
+  
+  // Filter out already used words
+  if (excludeWords && excludeWords.size > 0) {
+    words = words.filter(w => !excludeWords.has(w))
+  }
+  
+  // Fallback if no words available
+  if (words.length === 0) {
+    words = Array.from(commonWords).filter(w => w.length >= minLength && w.length <= maxLength)
+  }
+  
+  return words[Math.floor(Math.random() * words.length)]
+}
+
 // Generate Guess Word puzzle (e.g., "a_p_e" for "apple")
 export function generateGuessPuzzle(minLength: number = 5, maxLength: number = 8, excludeWords?: Set<string>): { word: string; puzzle: string; hint: string } {
-  const word = getRandomDictionaryWord(minLength, maxLength, excludeWords)
+  // Use common words for easier gameplay
+  const word = getRandomCommonWord(minLength, maxLength, excludeWords)
   
   // Create puzzle - always show first letter, plus ~40% of remaining letters
   const letters = word.split('')
@@ -220,7 +262,8 @@ export function generateGuessPuzzle(minLength: number = 5, maxLength: number = 8
 
 // Generate Scramble puzzle
 export function generateScramblePuzzle(minLength: number = 5, maxLength: number = 8, excludeWords?: Set<string>): { word: string; scrambled: string } {
-  const word = getRandomDictionaryWord(minLength, maxLength, excludeWords)
+  // Use common words for easier gameplay
+  const word = getRandomCommonWord(minLength, maxLength, excludeWords)
   
   // Scramble the letters using Fisher-Yates shuffle
   const letters = word.split('')
