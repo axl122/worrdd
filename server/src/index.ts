@@ -183,6 +183,42 @@ io.on('connection', (socket) => {
     console.log(`Host transferred to ${data.newHostId} in room ${room.roomCode}`)
   })
   
+  // Leave room
+  socket.on('room:leave', () => {
+    const roomCode = Array.from(socket.rooms)[1] || ''
+    if (!roomCode) return
+    
+    const room = rooms.getRoom(roomCode)
+    if (!room) return
+    
+    // Get permanent player ID from socket ID
+    const playerId = friends.getPlayerIdBySocket(socket.id) || socket.id
+    
+    // Remove player from room
+    const result = rooms.removePlayer(roomCode, playerId)
+    socket.leave(roomCode)
+    
+    if (!result.roomEmpty) {
+      // Broadcast updated state
+      const roomState: RoomStateEvent = {
+        roomCode: room.roomCode,
+        hostPlayerId: room.hostPlayerId,
+        players: Array.from(room.players.values()),
+        settings: room.settings,
+        phase: room.phase
+      }
+      io.to(roomCode).emit('room:state', roomState)
+      
+      if (result.newHostId) {
+        console.log(`New host in room ${roomCode}: ${result.newHostId}`)
+      }
+    }
+    
+    // Clear player's room state
+    socket.emit('room:left')
+    console.log(`Player ${playerId} left room ${roomCode}`)
+  })
+  
   // Use power-up
   socket.on('powerup:use', (data: { type: 'freeze' | 'burn' }) => {
     const room = rooms.getRoom(Array.from(socket.rooms)[1] || '')

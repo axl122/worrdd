@@ -318,7 +318,12 @@ const goBack = () => {
 
 const confirmLeave = () => {
   showLeaveModal.value = false
+  const socket = store.getSocket()
+  if (socket) {
+    socket.emit('room:leave')
+  }
   store.disconnectSocket()
+  store.reset()
   router.push('/')
 }
 

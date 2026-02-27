@@ -173,15 +173,26 @@ export function calculateFullBonus(word: string, sourceWord: string, bonusEnable
 }
 
 // Get random dictionary word for game modes
-export function getRandomDictionaryWord(minLength: number = 4, maxLength: number = 8): string {
+export function getRandomDictionaryWord(minLength: number = 4, maxLength: number = 8, excludeWords?: Set<string>): string {
   const dict = loadDictionary()
-  const words = Array.from(dict).filter(w => w.length >= minLength && w.length <= maxLength)
+  let words = Array.from(dict).filter(w => w.length >= minLength && w.length <= maxLength)
+  
+  // Filter out already used words
+  if (excludeWords && excludeWords.size > 0) {
+    words = words.filter(w => !excludeWords.has(w))
+  }
+  
+  // Fallback if no words available
+  if (words.length === 0) {
+    words = Array.from(dict).filter(w => w.length >= minLength && w.length <= maxLength)
+  }
+  
   return words[Math.floor(Math.random() * words.length)]
 }
 
 // Generate Guess Word puzzle (e.g., "a_p_e" for "apple")
-export function generateGuessPuzzle(minLength: number = 5, maxLength: number = 8): { word: string; puzzle: string; hint: string } {
-  const word = getRandomDictionaryWord(minLength, maxLength)
+export function generateGuessPuzzle(minLength: number = 5, maxLength: number = 8, excludeWords?: Set<string>): { word: string; puzzle: string; hint: string } {
+  const word = getRandomDictionaryWord(minLength, maxLength, excludeWords)
   
   // Create puzzle - always show first letter, plus ~40% of remaining letters
   const letters = word.split('')
@@ -208,8 +219,8 @@ export function generateGuessPuzzle(minLength: number = 5, maxLength: number = 8
 }
 
 // Generate Scramble puzzle
-export function generateScramblePuzzle(minLength: number = 5, maxLength: number = 8): { word: string; scrambled: string } {
-  const word = getRandomDictionaryWord(minLength, maxLength)
+export function generateScramblePuzzle(minLength: number = 5, maxLength: number = 8, excludeWords?: Set<string>): { word: string; scrambled: string } {
+  const word = getRandomDictionaryWord(minLength, maxLength, excludeWords)
   
   // Scramble the letters using Fisher-Yates shuffle
   const letters = word.split('')

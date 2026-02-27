@@ -323,19 +323,21 @@ function createRound(room: RoomState, roundIndex: number): RoundState {
     }
     case 'guess': {
       const wordLength = room.settings.guessWordLength ?? 6
-      const puzzle = generateGuessPuzzle(wordLength, wordLength)
+      const puzzle = generateGuessPuzzle(wordLength, wordLength + 2, room.usedSourceWords)
       roundState.sourceWord = puzzle.word
       roundState.puzzle = puzzle.puzzle
       roundState.hint = puzzle.hint
       roundState.correctAnswer = puzzle.word
+      room.usedSourceWords.add(puzzle.word) // Track used word
       break
     }
     case 'scramble': {
       const wordLength = room.settings.scrambleWordLength ?? 6
-      const scramble = generateScramblePuzzle(wordLength, wordLength)
+      const scramble = generateScramblePuzzle(wordLength, wordLength + 2, room.usedSourceWords)
       roundState.sourceWord = scramble.word
       roundState.scrambledWord = scramble.scrambled
       roundState.correctAnswer = scramble.word
+      room.usedSourceWords.add(scramble.word) // Track used word
       break
     }
     case 'teaser': {
@@ -344,6 +346,7 @@ function createRound(room: RoomState, roundIndex: number): RoundState {
       roundState.riddle = teaser.riddle
       roundState.hint = teaser.hint
       roundState.correctAnswer = teaser.answer
+      room.usedSourceWords.add(teaser.answer) // Track used word
       break
     }
   }
