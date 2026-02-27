@@ -35,6 +35,7 @@ export interface RoomState {
   players: Map<string, Player>
   settings: GameSettings
   phase: GamePhase
+  usedSourceWords: Set<string> // Track used source words to prevent repetition
 }
 
 export interface RoundState {

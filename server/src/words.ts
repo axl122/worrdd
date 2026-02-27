@@ -112,9 +112,22 @@ export async function isValidWordAsync(word: string): Promise<boolean> {
   }
 }
 
-export function getRandomSourceWord(): string {
+export function getRandomSourceWord(excludeWords?: Set<string>): string {
   const words = loadSourceWords()
-  return words[Math.floor(Math.random() * words.length)]
+  
+  // Filter out already used words
+  let availableWords = words
+  if (excludeWords && excludeWords.size > 0) {
+    availableWords = words.filter(w => !excludeWords.has(w))
+  }
+  
+  // If all words have been used, reset and use all words
+  if (availableWords.length === 0) {
+    console.log('All source words have been used, resetting...')
+    availableWords = words
+  }
+  
+  return availableWords[Math.floor(Math.random() * availableWords.length)]
 }
 
 export function canBuildFromLetters(word: string, sourceWord: string): boolean {

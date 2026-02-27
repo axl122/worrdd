@@ -57,7 +57,8 @@ export function createRoom(hostName: string, hostSocketId: string, hostPlayerId?
     hostPlayerId: playerId,
     players: new Map([[playerId, hostPlayer]]),
     settings: defaultSettings,
-    phase: 'lobby'
+    phase: 'lobby',
+    usedSourceWords: new Set()
   }
   
   rooms.set(roomCode, room)
@@ -315,7 +316,9 @@ function createRound(room: RoomState, roundIndex: number): RoundState {
   // Generate mode-specific content with settings
   switch (gameMode) {
     case 'classic': {
-      roundState.sourceWord = getRandomSourceWord()
+      const sourceWord = getRandomSourceWord(room.usedSourceWords)
+      roundState.sourceWord = sourceWord
+      room.usedSourceWords.add(sourceWord) // Track used word
       break
     }
     case 'guess': {
