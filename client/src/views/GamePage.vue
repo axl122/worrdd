@@ -160,6 +160,22 @@ const setupSocketListeners = () => {
     scrambledWord.value = data.scrambledWord || ''
     riddle.value = data.riddle || ''
     
+    // Update store's currentRound to prevent stale data on navigation
+    store.setCurrentRound({
+      roundIndex: data.roundIndex,
+      sourceWord: data.sourceWord,
+      startedAt: data.startedAt,
+      endsAt: data.endsAt,
+      usedWordsGlobal: [],
+      submissionsByPlayerId: {},
+      scoresByPlayerId: {},
+      gameMode: data.gameMode,
+      puzzle: data.puzzle,
+      hint: data.hint,
+      scrambledWord: data.scrambledWord,
+      riddle: data.riddle
+    } as any)
+    
     // Initialize power-ups from current player
     const player = store.currentPlayer
     if (player) {
