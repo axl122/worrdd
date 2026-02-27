@@ -681,6 +681,19 @@ onUnmounted(() => {
               </button>
             </div>
           </template>
+
+          <!-- Dark Mode Toggle (always visible) -->
+          <div class="setting-item toggle dark-mode-toggle">
+            <label>🌙 Dark Mode</label>
+            <button 
+              class="toggle-btn" 
+              :class="{ active: store.darkMode }"
+              @click="store.toggleDarkMode()"
+            >
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">{{ store.darkMode ? 'ON' : 'OFF' }}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2089,5 +2102,16 @@ onUnmounted(() => {
   .setting-label {
     font-size: 0.85rem;
   }
+}
+
+/* Dark Mode Toggle */
+.dark-mode-toggle {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--pencil-light);
+}
+
+.dark-mode-toggle label {
+  font-size: 1.1rem;
 }
 </style>

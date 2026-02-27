@@ -131,6 +131,9 @@ export const useGameStore = defineStore('game', () => {
   const playerId = ref<string | null>(localStorage.getItem('worrdd_playerId') || null)
   const playerName = ref<string>(localStorage.getItem('worrdd_playerName') || '')
   
+  // Dark mode - restore from localStorage
+  const darkMode = ref(localStorage.getItem('worrdd_darkMode') === 'true')
+  
   // Room state
   const roomState = ref<RoomState | null>(null)
   
@@ -247,6 +250,18 @@ export const useGameStore = defineStore('game', () => {
     gameEndData.value = data
   }
 
+  const toggleDarkMode = () => {
+    darkMode.value = !darkMode.value
+    localStorage.setItem('worrdd_darkMode', String(darkMode.value))
+    // Apply dark mode class to body
+    document.body.classList.toggle('dark-mode', darkMode.value)
+  }
+
+  // Initialize dark mode on load
+  if (darkMode.value) {
+    document.body.classList.add('dark-mode')
+  }
+
   const reset = () => {
     roomState.value = null
     currentRound.value = null
@@ -295,6 +310,7 @@ export const useGameStore = defineStore('game', () => {
     // State
     playerId,
     playerName,
+    darkMode,
     roomState,
     currentRound,
     roundEndData,
@@ -321,6 +337,7 @@ export const useGameStore = defineStore('game', () => {
     setGameEndData,
     setError,
     setConnected,
+    toggleDarkMode,
     reset,
     addUnreadMessage,
     clearUnreadMessages,

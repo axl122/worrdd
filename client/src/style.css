@@ -22,6 +22,40 @@
   --btn-padding: clamp(0.4rem 1rem, 2vw 4vw, 0.6rem 2rem);
 }
 
+/* Dark Mode Theme */
+body.dark-mode {
+  --bg-paper: #1a1a2e;
+  --bg-paper-dark: #16213e;
+  --pencil-dark: #eaeaea;
+  --pencil-medium: #b8b8b8;
+  --pencil-light: #888888;
+  --pencil-faint: #555555;
+  --eraser: #0f3460;
+  --highlight: #e94560;
+  --sketch-line: rgba(234, 234, 234, 0.85);
+}
+
+body.dark-mode {
+  background-color: var(--bg-paper);
+  color: var(--pencil-dark);
+  /* Dark paper texture effect */
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 24px,
+      rgba(50, 50, 80, 0.3) 24px,
+      rgba(50, 50, 80, 0.3) 25px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 24px,
+      rgba(50, 50, 80, 0.15) 24px,
+      rgba(50, 50, 80, 0.15) 25px
+    );
+}
+
 * {
   margin: 0;
   padding: 0;
