@@ -668,7 +668,7 @@ onUnmounted(() => {
             <div class="setting-item">
               <label>Min Word Length</label>
               <div class="setting-control">
-                <button class="setting-btn" @click="updateSettings('minLen', Math.max(2, settings.minLen - 1))">−</button>
+                <button class="setting-btn" @click="updateSettings('minLen', Math.max(3, settings.minLen - 1))">−</button>
                 <span class="setting-value">{{ settings.minLen }}</span>
                 <button class="setting-btn" @click="updateSettings('minLen', Math.min(7, settings.minLen + 1))">+</button>
               </div>

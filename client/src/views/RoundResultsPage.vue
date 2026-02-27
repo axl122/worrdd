@@ -74,7 +74,11 @@ const isWinner = computed(() => {
 const allPlayersReady = computed(() => {
   if (!store.roomState) return false
   const connectedPlayers = store.roomState.players.filter(p => p.connected)
-  return connectedPlayers.every(p => playersReady.value.has(p.id)) && connectedPlayers.length > 0
+  // Host is always considered ready
+  const hostId = store.roomState.hostPlayerId
+  return connectedPlayers.every(p => 
+    p.id === hostId || playersReady.value.has(p.id)
+  ) && connectedPlayers.length > 0
 })
 
 const iAmReady = computed(() => {
@@ -169,6 +173,11 @@ onMounted(() => {
   
   // Initialize total rounds from store
   totalRounds.value = store.roomState?.settings.rounds || 7
+  
+  // Auto-mark host as ready (host doesn't need to click ready)
+  if (store.roomState?.hostPlayerId && store.playerId) {
+    playersReady.value.add(store.roomState.hostPlayerId)
+  }
 })
 
 // Watch for all players ready to start countdown
