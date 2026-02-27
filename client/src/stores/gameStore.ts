@@ -127,6 +127,19 @@ export const useGameStore = defineStore('game', () => {
   // Shared socket instance
   let socket: Socket | null = null
 
+  // Authenticated user (from Google Sign In)
+  const authenticatedUser = ref<{
+    id: string
+    googleId: string
+    email: string
+    name: string
+    picture?: string
+    totalGamesPlayed?: number
+    totalWins?: number
+    totalScore?: number
+    highestRoundScore?: number
+  } | null>(null)
+
   // Player info - restore from localStorage
   const playerId = ref<string | null>(localStorage.getItem('worrdd_playerId') || null)
   const playerName = ref<string>(localStorage.getItem('worrdd_playerName') || '')
@@ -306,11 +319,34 @@ export const useGameStore = defineStore('game', () => {
     waitingForFriend.value = data
   }
 
+  // Auth actions
+  const setAuthenticatedUser = (user: typeof authenticatedUser.value) => {
+    authenticatedUser.value = user
+    // If user is authenticated, use their name as player name
+    if (user?.name) {
+      playerName.value = user.name
+      localStorage.setItem('worrdd_playerName', user.name)
+    }
+  }
+
+  const logout = async () => {
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      })
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+    authenticatedUser.value = null
+  }
+
   return {
     // State
     playerId,
     playerName,
     darkMode,
+    authenticatedUser,
     roomState,
     currentRound,
     roundEndData,
@@ -331,6 +367,8 @@ export const useGameStore = defineStore('game', () => {
     
     // Actions
     setPlayerInfo,
+    setAuthenticatedUser,
+    logout,
     setRoomState,
     setCurrentRound,
     setRoundEndData,

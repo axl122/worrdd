@@ -2,9 +2,12 @@ import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 import { loadDictionary, loadSourceWords } from './words.js'
 import * as rooms from './rooms.js'
 import * as friends from './friends.js'
+import { connectDB } from './db.js'
+import * as auth from './auth.js'
 import type { 
   RoomStateEvent, 
   RoundStartEvent, 
@@ -32,15 +35,189 @@ app.use(cors({
   credentials: true
 }))
 app.use(express.json())
+app.use(cookieParser())
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+// Auth endpoints
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { idToken } = req.body
+    const result = await auth.loginWithGoogle(idToken)
+    
+    if (!result) {
+      return res.status(401).json({ error: 'Invalid Google token' })
+    }
+    
+    // Set HTTP-only cookie
+    res.cookie('token', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    })
+    
+    res.json({ user: result.user })
+  } catch (error) {
+    console.error('Google auth error:', error)
+    res.status(500).json({ error: 'Authentication failed' })
+  }
+})
+
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const token = req.cookies.token
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated' })
+    }
+    
+    const decoded = auth.verifyToken(token)
+    if (!decoded) {
+      return res.status(401).json({ error: 'Invalid token' })
+    }
+    
+    const user = await auth.getUserById(decoded.userId)
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' })
+    }
+    
+    res.json({
+      user: {
+        id: user._id.toString(),
+        googleId: user.googleId,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        totalGamesPlayed: user.totalGamesPlayed,
+        totalWins: user.totalWins,
+        totalScore: user.totalScore,
+        highestRoundScore: user.highestRoundScore
+      }
+    })
+  } catch (error) {
+    console.error('Auth check error:', error)
+    res.status(500).json({ error: 'Failed to verify authentication' })
+  }
+})
+
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('token')
+  res.json({ success: true })
+})
+
+// User search endpoint
+app.get('/api/users/search', async (req, res) => {
+  try {
+    const token = req.cookies.token
+    if (!token) return res.status(401).json({ error: 'Not authenticated' })
+    
+    const decoded = auth.verifyToken(token)
+    if (!decoded) return res.status(401).json({ error: 'Invalid token' })
+    
+    const { q } = req.query
+    if (!q || typeof q !== 'string') {
+      return res.json([])
+    }
+    
+    const users = await auth.searchUsers(q, decoded.userId)
+    res.json(users)
+  } catch (error) {
+    console.error('User search error:', error)
+    res.status(500).json({ error: 'Search failed' })
+  }
+})
+
+// Friend endpoints
+app.get('/api/friends', async (req, res) => {
+  try {
+    const token = req.cookies.token
+    if (!token) return res.status(401).json({ error: 'Not authenticated' })
+    
+    const decoded = auth.verifyToken(token)
+    if (!decoded) return res.status(401).json({ error: 'Invalid token' })
+    
+    const friends = await auth.getFriends(decoded.userId)
+    res.json(friends)
+  } catch (error) {
+    console.error('Get friends error:', error)
+    res.status(500).json({ error: 'Failed to get friends' })
+  }
+})
+
+app.post('/api/friends/request', async (req, res) => {
+  try {
+    const token = req.cookies.token
+    if (!token) return res.status(401).json({ error: 'Not authenticated' })
+    
+    const decoded = auth.verifyToken(token)
+    if (!decoded) return res.status(401).json({ error: 'Invalid token' })
+    
+    const { friendId } = req.body
+    const result = await auth.sendFriendRequest(decoded.userId, friendId)
+    res.json(result)
+  } catch (error) {
+    console.error('Friend request error:', error)
+    res.status(500).json({ error: 'Failed to send friend request' })
+  }
+})
+
+app.post('/api/friends/accept', async (req, res) => {
+  try {
+    const token = req.cookies.token
+    if (!token) return res.status(401).json({ error: 'Not authenticated' })
+    
+    const decoded = auth.verifyToken(token)
+    if (!decoded) return res.status(401).json({ error: 'Invalid token' })
+    
+    const { friendId } = req.body
+    const result = await auth.acceptFriendRequest(decoded.userId, friendId)
+    res.json(result)
+  } catch (error) {
+    console.error('Accept friend error:', error)
+    res.status(500).json({ error: 'Failed to accept friend request' })
+  }
+})
+
+app.post('/api/friends/reject', async (req, res) => {
+  try {
+    const token = req.cookies.token
+    if (!token) return res.status(401).json({ error: 'Not authenticated' })
+    
+    const decoded = auth.verifyToken(token)
+    if (!decoded) return res.status(401).json({ error: 'Invalid token' })
+    
+    const { friendId } = req.body
+    const result = await auth.rejectFriendRequest(decoded.userId, friendId)
+    res.json(result)
+  } catch (error) {
+    console.error('Reject friend error:', error)
+    res.status(500).json({ error: 'Failed to reject friend request' })
+  }
+})
+
+app.post('/api/friends/remove', async (req, res) => {
+  try {
+    const token = req.cookies.token
+    if (!token) return res.status(401).json({ error: 'Not authenticated' })
+    
+    const decoded = auth.verifyToken(token)
+    if (!decoded) return res.status(401).json({ error: 'Invalid token' })
+    
+    const { friendId } = req.body
+    const result = await auth.removeFriend(decoded.userId, friendId)
+    res.json(result)
+  } catch (error) {
+    console.error('Remove friend error:', error)
+    res.status(500).json({ error: 'Failed to remove friend' })
+  }
+})
+
 // Load dictionaries on startup
 loadDictionary()
-loadSourceWords()
+loadSourceWords
 
 // Initialize friends module with IO
 friends.setIO(io)
@@ -578,7 +755,14 @@ io.on('connection', (socket) => {
 })
 
 // Start server
-httpServer.listen(PORT, () => {
-  console.log(`WORRDD server running on port ${PORT}`)
-  console.log(`CORS origin: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`)
-})
+async function startServer() {
+  // Connect to MongoDB
+  await connectDB()
+  
+  httpServer.listen(PORT, () => {
+    console.log(`WORRDD server running on port ${PORT}`)
+    console.log(`CORS origin: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`)
+  })
+}
+
+startServer().catch(console.error)
