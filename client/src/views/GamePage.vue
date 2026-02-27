@@ -532,7 +532,22 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopTimer()
-  // Don't disconnect socket - other pages may need it
+  // Clean up socket listeners to prevent duplicates
+  const socket = store.getSocket()
+  if (socket) {
+    socket.off('game:state')
+    socket.off('round:start')
+    socket.off('word:result')
+    socket.off('word:claimed')
+    socket.off('word:solved')
+    socket.off('powerup:freeze')
+    socket.off('powerup:burn')
+    socket.off('powerup:awarded')
+    socket.off('round:end')
+    socket.off('game:end')
+    socket.off('chat:message')
+    socket.off('player:ready')
+  }
 })
 </script>
 
@@ -2286,6 +2301,86 @@ onUnmounted(() => {
   .game-page {
     max-width: 500px;
     margin: 0 auto;
+  }
+}
+
+/* Mobile optimizations */
+@media (max-width: 480px) {
+  .game-page {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .game-header {
+    padding: 8px;
+  }
+  
+  .timer-circle {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .timer-text {
+    font-size: 1rem;
+  }
+  
+  .word-input-area {
+    padding: 8px;
+  }
+  
+  .word-input {
+    font-size: 1.1rem;
+    padding: 12px;
+  }
+  
+  .submit-btn {
+    min-width: 60px;
+    padding: 12px 16px;
+  }
+  
+  .mini-leaderboard {
+    padding: 4px 8px;
+  }
+  
+  .leaderboard-entry {
+    font-size: 0.85rem;
+    padding: 2px 6px;
+  }
+  
+  .chat-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .chat-input {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+  
+  .submitted-words {
+    max-height: 80px;
+  }
+  
+  .word-chip {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 360px) {
+  .round-label {
+    font-size: 0.7rem;
+  }
+  
+  .round-number {
+    font-size: 1rem;
+  }
+  
+  .source-word {
+    font-size: 1.8rem;
+  }
+  
+  .puzzle-hint {
+    font-size: 0.9rem;
   }
 }
 </style>

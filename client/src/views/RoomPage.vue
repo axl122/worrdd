@@ -338,7 +338,20 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // Don't disconnect socket here - GamePage needs it
+  // Clean up socket listeners to prevent duplicates
+  const socket = store.getSocket()
+  if (socket) {
+    socket.off('connect')
+    socket.off('disconnect')
+    socket.off('error')
+    socket.off('player:id')
+    socket.off('game:countdown')
+    socket.off('room:state')
+    socket.off('round:start')
+    socket.off('round:end')
+    socket.off('game:end')
+    socket.off('chat:message')
+  }
 })
 </script>
 
@@ -1990,6 +2003,79 @@ onUnmounted(() => {
   .lobby-mode {
     max-width: 500px;
     margin: 0 auto;
+  }
+}
+
+/* Mobile optimizations */
+@media (max-width: 480px) {
+  .room-page {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .page-header {
+    padding: 8px 12px;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .player-item {
+    padding: 8px;
+  }
+  
+  .player-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .settings-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .setting-item {
+    padding: 8px;
+  }
+  
+  .mode-cards {
+    flex-direction: column;
+  }
+  
+  .mode-card {
+    padding: 12px;
+  }
+  
+  .room-code {
+    font-size: 1.5rem;
+  }
+  
+  .chat-input {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+  
+  .start-btn, .ready-btn {
+    padding: 12px 20px;
+    font-size: 1.2rem;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 360px) {
+  .page-title {
+    font-size: 1.2rem;
+  }
+  
+  .room-code {
+    font-size: 1.2rem;
+  }
+  
+  .player-name {
+    font-size: 0.9rem;
+  }
+  
+  .setting-label {
+    font-size: 0.85rem;
   }
 }
 </style>

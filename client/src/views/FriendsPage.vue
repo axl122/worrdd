@@ -1178,4 +1178,82 @@ onUnmounted(() => {
   font-size: 1rem;
   cursor: pointer;
 }
+
+/* Mobile optimizations */
+@media (max-width: 480px) {
+  .friends-container {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .friends-header {
+    padding: 8px 12px;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .tabs {
+    flex-direction: column;
+  }
+  
+  .tab-btn {
+    padding: 10px;
+    font-size: 1rem;
+  }
+  
+  .friend-item {
+    padding: 10px;
+  }
+  
+  .friend-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .friend-name {
+    font-size: 1rem;
+  }
+  
+  .chat-input {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+  
+  .send-btn {
+    padding: 8px 16px;
+  }
+  
+  .message {
+    max-width: 85%;
+  }
+  
+  .code-display {
+    font-size: 1.2rem;
+    padding: 12px;
+  }
+  
+  .invite-popup, .waiting-popup, .confirm-dialog {
+    width: 95%;
+    padding: 16px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 360px) {
+  .page-title {
+    font-size: 1.2rem;
+  }
+  
+  .friend-name {
+    font-size: 0.9rem;
+  }
+  
+  .message-text {
+    font-size: 0.9rem;
+  }
+  
+  .code-display {
+    font-size: 1rem;
+  }
+}
 </style>
