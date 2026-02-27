@@ -345,6 +345,19 @@ onUnmounted(() => {
         <span class="btn-icon">🚪</span>
         Join Room
       </button>
+
+      <!-- Dark Mode Toggle -->
+      <div class="dark-mode-toggle">
+        <label>🌙 Dark Mode</label>
+        <button 
+          class="toggle-btn" 
+          :class="{ active: store.darkMode }"
+          @click="store.toggleDarkMode()"
+        >
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">{{ store.darkMode ? 'ON' : 'OFF' }}</span>
+        </button>
+      </div>
     </div>
 
     <!-- Hint Popup -->
@@ -1034,5 +1047,67 @@ onUnmounted(() => {
 .decline-btn, .cancel-btn {
   background: var(--bg-paper);
   color: var(--pencil-dark);
+}
+
+/* Dark Mode Toggle */
+.dark-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  margin-top: 16px;
+  background: var(--bg-paper);
+  border: 2px solid var(--pencil-dark);
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+
+.dark-mode-toggle label {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1.1rem;
+  color: var(--pencil-dark);
+}
+
+.toggle-btn {
+  position: relative;
+  width: 60px;
+  height: 32px;
+  background: var(--bg-paper-dark);
+  border: 2px solid var(--pencil-dark);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.toggle-btn.active {
+  background: var(--pencil-dark);
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  background: var(--bg-paper);
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.toggle-btn.active .toggle-slider {
+  transform: translateX(28px);
+}
+
+.toggle-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Patrick Hand', cursive;
+  font-size: 0.75rem;
+  color: var(--pencil-dark);
+}
+
+.toggle-btn.active .toggle-label {
+  color: var(--bg-paper);
 }
 </style>
