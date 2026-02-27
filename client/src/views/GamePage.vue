@@ -20,6 +20,13 @@ const lastResult = ref<{ ok: boolean; word: string; points?: number; reason?: st
 const showResultAnimation = ref(false)
 const leaderboard = ref<Array<{ playerId: string; playerName: string; score: number }>>([])
 
+// Network status
+const networkLatency = ref(0)
+const networkQuality = ref<'good' | 'fair' | 'poor' | 'disconnected'>('good')
+const showNetworkWarning = ref(false)
+let pingInterval: number | null = null
+let lastPingTime = 0
+
 // Game mode state
 const gameMode = ref<'classic' | 'guess' | 'scramble' | 'teaser'>('classic')
 const puzzle = ref('') // For guess mode
@@ -106,11 +113,32 @@ const setupSocketListeners = () => {
   socket.off('game:end')
   socket.off('chat:message')
   socket.off('player:ready')
+  socket.off('pong')
 
   socket.on('game:state', (data: any) => {
     roundIndex.value = data.roundIndex
     totalRounds.value = data.totalRounds
     updateLeaderboard(data.scoresByPlayerId)
+  })
+
+  // Network latency tracking
+  socket.on('pong', () => {
+    const latency = Date.now() - lastPingTime
+    networkLatency.value = latency
+    
+    if (latency < 100) {
+      networkQuality.value = 'good'
+      showNetworkWarning.value = false
+    } else if (latency < 300) {
+      networkQuality.value = 'fair'
+      showNetworkWarning.value = false
+    } else if (latency < 1000) {
+      networkQuality.value = 'poor'
+      showNetworkWarning.value = true
+    } else {
+      networkQuality.value = 'disconnected'
+      showNetworkWarning.value = true
+    }
   })
 
   socket.on('round:start', (data: RoundStartEvent) => {
@@ -542,10 +570,24 @@ onMounted(() => {
   }
   
   setupSocketListeners()
+  
+  // Start network latency monitoring
+  const socket = store.getSocket()
+  if (socket) {
+    pingInterval = window.setInterval(() => {
+      lastPingTime = Date.now()
+      socket.emit('ping')
+    }, 2000) // Ping every 2 seconds
+  }
 })
 
 onUnmounted(() => {
   stopTimer()
+  // Stop ping interval
+  if (pingInterval) {
+    clearInterval(pingInterval)
+    pingInterval = null
+  }
   // Clean up socket listeners to prevent duplicates
   const socket = store.getSocket()
   if (socket) {
@@ -561,12 +603,38 @@ onUnmounted(() => {
     socket.off('game:end')
     socket.off('chat:message')
     socket.off('player:ready')
+    socket.off('pong')
   }
 })
 </script>
 
 <template>
   <div class="game-page">
+    <!-- Network Warning Banner -->
+    <Transition name="slide-down">
+      <div v-if="showNetworkWarning" class="network-warning" :class="networkQuality">
+        <span class="network-icon">
+          <svg v-if="networkQuality === 'poor'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+            <circle cx="12" cy="20" r="1" fill="currentColor"/>
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="1" y1="1" x2="23" y2="23"/>
+            <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+            <path d="M5 12.55a10.94 10.94 0 0 1 5.7-5.38"/>
+            <path d="M1.42 9a16 16 0 0 1 5.7-3.49"/>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+            <circle cx="12" cy="20" r="1" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="network-text">
+          {{ networkQuality === 'poor' ? `Slow network (${networkLatency}ms) - Answers may be delayed` : 'Connection lost - Reconnecting...' }}
+        </span>
+      </div>
+    </Transition>
+    
     <!-- Header with Timer, Round, Leaderboard -->
     <header class="game-header">
       <div class="header-top">
@@ -2316,6 +2384,58 @@ onUnmounted(() => {
     max-width: 500px;
     margin: 0 auto;
   }
+}
+
+/* Network Warning */
+.network-warning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 0.9rem;
+  z-index: 1000;
+  animation: pulse-warning 2s infinite;
+}
+
+.network-warning.poor {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+}
+
+.network-warning.disconnected {
+  background: linear-gradient(135deg, #f44336, #d32f2f);
+  color: white;
+}
+
+.network-icon {
+  display: flex;
+  align-items: center;
+}
+
+.network-text {
+  font-weight: 500;
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  transform: translateY(-100%);
+  opacity: 0;
 }
 
 /* Mobile optimizations */

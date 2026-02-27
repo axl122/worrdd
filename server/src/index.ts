@@ -49,6 +49,13 @@ friends.setIO(io)
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`)
   
+  // ==================== NETWORK EVENTS ====================
+  
+  // Ping for latency measurement
+  socket.on('ping', () => {
+    socket.emit('pong')
+  })
+  
   // ==================== ROOM EVENTS ====================
   
   // Create room
