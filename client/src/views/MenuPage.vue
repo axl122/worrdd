@@ -311,7 +311,9 @@ onUnmounted(() => {
   <div class="menu-container">
     <!-- Chat Icon (top right) -->
     <div class="chat-icon-btn" @click="toggleChat">
-      <span class="chat-icon">�</span>
+      <svg class="chat-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
       <span v-if="unreadCount > 0" class="notification-badge">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
     </div>
     
@@ -973,10 +975,24 @@ onUnmounted(() => {
   cursor: pointer;
   padding: var(--spacing-sm);
   z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--bg-secondary);
+  border-radius: 50%;
+  transition: background 0.2s;
 }
 
-.chat-icon {
-  font-size: 1.5rem;
+.chat-icon-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.chat-icon-svg {
+  width: 24px;
+  height: 24px;
+  color: var(--text-primary);
 }
 
 .notification-badge {
