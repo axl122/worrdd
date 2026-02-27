@@ -1,0 +1,17 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[context.production.environment]
+  VITE_SERVER_URL = "https://worrdd-server.onrender.com"
+
+[context.deploy-preview.environment]
+  VITE_SERVER_URL = "https://worrdd-server.onrender.com"
