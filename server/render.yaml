@@ -6,13 +6,13 @@ services:
     plan: free
     buildCommand: npm install && npm run build
     startCommand: npm run start
+    # Auto-deploy on push to main branch
+    autoDeploy: true
+    branch: main
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: CORS_ORIGIN
-        fromService:
-          name: worrdd-client
-          type: pserv
-          property: url
+        value: https://worrdd-game.netlify.app
